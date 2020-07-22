@@ -9,6 +9,8 @@ import (
 	"gioui.org/app/internal/window"
 )
 
+type MenuItem = window.MenuItem
+
 // extraArgs contains extra arguments to append to
 // os.Args. The arguments are separated with |.
 // Useful for running programs on mobiles where the
@@ -45,4 +47,8 @@ func DataDir() (string, error) {
 // running windows.
 func Main() {
 	window.Main()
+}
+
+func Menu(title string, items ...MenuItem) {
+	window.Menu(title, items...)
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"image"
 	"runtime"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf16"
@@ -45,6 +46,11 @@ __attribute__ ((visibility ("hidden"))) CFTypeRef gio_createWindow(CFTypeRef vie
 __attribute__ ((visibility ("hidden"))) void gio_makeKeyAndOrderFront(CFTypeRef windowRef);
 __attribute__ ((visibility ("hidden"))) NSPoint gio_cascadeTopLeftFromPoint(CFTypeRef windowRef, NSPoint topLeft);
 __attribute__ ((visibility ("hidden"))) void gio_close(CFTypeRef windowRef);
+__attribute__ ((visibility ("hidden"))) CFTypeRef gio_newMenuItem(const char *title, const char *keyEquivalent, int tag);
+__attribute__ ((visibility ("hidden"))) CFTypeRef gio_newMenu(const char *title);
+__attribute__ ((visibility ("hidden"))) void gio_menuAddItem(CFTypeRef menu, CFTypeRef menuItem);
+__attribute__ ((visibility ("hidden"))) CFTypeRef gio_newSubMenu(CFTypeRef subMenu);
+__attribute__ ((visibility ("hidden"))) CFTypeRef gio_mainMenu();
 */
 import "C"
 
@@ -62,6 +68,12 @@ type window struct {
 	cursor      pointer.CursorName
 
 	scale float32
+}
+
+type MenuItem struct {
+	Title         string
+	KeyEquivalent string
+	Tag           int
 }
 
 // viewMap is the mapping from Cocoa NSViews to Go windows.
@@ -154,6 +166,10 @@ func (w *window) setStage(stage system.Stage) {
 	}
 	w.stage = stage
 	w.w.Event(system.StageEvent{Stage: stage})
+}
+
+func (w *window) sendMenu(tag int) {
+	w.w.Event(system.MenuEvent{Tag: tag})
 }
 
 //export gio_onKeys
@@ -315,6 +331,19 @@ func gio_onFinishLaunching() {
 	close(launched)
 }
 
+//export gio_onAppMenu
+//
+// Send the menu event to a random window. It's up to the app to route the
+// event appropriately. (This may or may not be the right idea. But on the
+// other hand, it doesn't seem right for multiple event loops to get a "Paste"
+// event.)
+func gio_onAppMenu(tag C.int) {
+	for _, w := range viewMap {
+		w.sendMenu(int(tag))
+		break
+	}
+}
+
 func NewWindow(win Callbacks, opts *Options) error {
 	<-launched
 	errch := make(chan error)
@@ -469,4 +498,30 @@ func convertMods(mods C.NSUInteger) key.Modifiers {
 		kmods |= key.ModShift
 	}
 	return kmods
+}
+
+func Menu(title string, items ...MenuItem) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	runOnMain(func() {
+		defer wg.Done()
+		title := C.CString(title)
+		defer C.free(unsafe.Pointer(title))
+		subMenu := C.gio_newMenu(title)
+
+		for _, item := range items {
+			title := C.CString(item.Title)
+			keyEq := C.CString(item.KeyEquivalent)
+			defer func() {
+				C.free(unsafe.Pointer(title))
+				C.free(unsafe.Pointer(keyEq))
+			}()
+			newWindowItem := C.gio_newMenuItem(title, keyEq, C.int(item.Tag))
+			C.gio_menuAddItem(subMenu, newWindowItem)
+		}
+
+		menu := C.gio_newSubMenu(subMenu)
+		C.gio_menuAddItem(C.gio_mainMenu(), menu)
+	})
+	wg.Wait()
 }

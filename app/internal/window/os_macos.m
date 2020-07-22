@@ -193,6 +193,47 @@ CFTypeRef gio_createWindow(CFTypeRef viewRef, const char *title, CGFloat width, 
 	}
 }
 
+CFTypeRef gio_newMenu(const char *title) {
+	@autoreleasepool {
+		NSString *nsTitle = [NSString stringWithUTF8String:title];
+		NSMenu *menu = [[NSMenu alloc] initWithTitle:nsTitle];
+		return (__bridge_retained CFTypeRef)menu;
+	}
+}
+
+void gio_menuAddItem(CFTypeRef menu, CFTypeRef menuItem) {
+	@autoreleasepool {
+		NSMenu *nsMenu = (__bridge NSMenu *)menu;
+		NSMenuItem *nsMenuItem = (__bridge NSMenuItem *)menuItem;
+		[nsMenu addItem:nsMenuItem];
+	}
+}
+
+CFTypeRef gio_newSubMenu(CFTypeRef subMenu) {
+	@autoreleasepool {
+		NSMenu *nsSubMenu = (__bridge NSMenu *)subMenu;
+		NSMenuItem *menu = [NSMenuItem new];
+		[menu setSubmenu:nsSubMenu];
+		return (__bridge_retained CFTypeRef)menu;
+	}
+}
+
+CFTypeRef gio_mainMenu() {
+	return (__bridge_retained CFTypeRef)[NSApp mainMenu];
+}
+
+CFTypeRef gio_newMenuItem(const char *title, const char *keyEquivalent, int tag) {
+	@autoreleasepool {
+		NSString *nsTitle = [NSString stringWithUTF8String:title];
+		NSString *nsKeyEq = [NSString stringWithUTF8String:keyEquivalent];
+		NSMenuItem *menuItem = [[NSMenuItem alloc] initWithTitle:nsTitle
+														  action:@selector(applicationMenu:)
+												   keyEquivalent:nsKeyEq];
+		[menuItem setTag:tag];
+		return (__bridge_retained CFTypeRef)menuItem;
+	}
+}
+
 void gio_close(CFTypeRef windowRef) {
   NSWindow* window = (__bridge NSWindow *)windowRef;
   [window performClose:nil];
@@ -209,6 +250,11 @@ void gio_close(CFTypeRef windowRef) {
 - (void)applicationWillUnhide:(NSNotification *)notification {
 	gio_onAppShow();
 }
+- (void)applicationMenu:(id) sender {
+    NSMenuItem * item = (NSMenuItem*)sender;
+    int tag = [item tag];
+    gio_onAppMenu(tag);
+}
 @end
 
 void gio_main() {
@@ -220,19 +266,31 @@ void gio_main() {
 
 		NSMenuItem *mainMenu = [NSMenuItem new];
 
-		NSMenu *menu = [NSMenu new];
+		NSMenu *mainSubMenu = [NSMenu new];
 		NSMenuItem *hideMenuItem = [[NSMenuItem alloc] initWithTitle:@"Hide"
 															  action:@selector(hide:)
 													   keyEquivalent:@"h"];
-		[menu addItem:hideMenuItem];
+		[mainSubMenu addItem:hideMenuItem];
 		NSMenuItem *quitMenuItem = [[NSMenuItem alloc] initWithTitle:@"Quit"
 															  action:@selector(terminate:)
 													   keyEquivalent:@"q"];
-		[menu addItem:quitMenuItem];
-		[mainMenu setSubmenu:menu];
+		[mainSubMenu addItem:quitMenuItem];
+		[mainMenu setSubmenu:mainSubMenu];
 		NSMenu *menuBar = [NSMenu new];
 		[menuBar addItem:mainMenu];
 		[NSApp setMainMenu:menuBar];
+
+		//NSMenuItem *newWindowItem = (__bridge NSMenuItem *)gio_newMenuItem("New Window", "n", 3);
+		//NSMenu *fileSubMenu = (__bridge NSMenu *)gio_newMenu("File");
+		//gio_menuAddItem((__bridge CFTypeRef)fileSubMenu, (__bridge CFTypeRef)newWindowItem);
+		//NSMenuItem *fileMenu = (__bridge NSMenuItem *)gio_newSubMenu((__bridge CFTypeRef)fileSubMenu);
+		//gio_menuAddItem(gio_mainMenu(), (__bridge CFTypeRef)fileMenu);
+
+		//CFTypeRef newWindowItem = gio_newMenuItem("New Window", "n", 3);
+		//CFTypeRef fileSubMenu = gio_newMenu("File");
+		//gio_menuAddItem(fileSubMenu, newWindowItem);
+		//CFTypeRef fileMenu = gio_newSubMenu(fileSubMenu);
+		//gio_menuAddItem(gio_mainMenu(), fileMenu);
 
 		globalWindowDel = [[GioWindowDelegate alloc] init];
 
