@@ -144,12 +144,6 @@ func (l *List) Dragging() bool {
 func (l *List) ScrollTo(item int) {
 	if item < 0 {
 		item = 0
-	} else if item >= l.len {
-		if l.len > 0 {
-			item = l.len - 1
-		} else {
-			item = 0
-		}
 	}
 
 	// Set default.
