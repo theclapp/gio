@@ -79,6 +79,12 @@ type windowAndOptions struct {
 	opts   *Options
 }
 
+type MenuItem struct {
+	Title         string
+	KeyEquivalent string
+	Tag           int
+}
+
 func newWindowRendezvous() *windowRendezvous {
 	wr := &windowRendezvous{
 		in:   make(chan windowAndOptions),

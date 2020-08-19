@@ -1577,3 +1577,5 @@ func fromFixed(v C.wl_fixed_t) float32 {
 	f := math.Float64frombits(b) - (3 << 43)
 	return float32(f)
 }
+
+func Menu(title string, items ...MenuItem) {}
