@@ -781,3 +781,5 @@ func (w *x11Window) updateXkbKeymap() error {
 	w.xkb.SetKeymap(unsafe.Pointer(keymap), unsafe.Pointer(state))
 	return nil
 }
+
+func X11Menu(title string, items ...MenuItem) {}

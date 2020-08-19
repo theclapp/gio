@@ -796,3 +796,5 @@ func configForDPI(dpi int) unit.Metric {
 		PxPerSp: ppdp,
 	}
 }
+
+func Menu(title string, items ...MenuItem) {}

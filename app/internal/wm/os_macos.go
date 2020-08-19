@@ -76,12 +76,6 @@ type window struct {
 	mode  WindowMode
 }
 
-type MenuItem struct {
-	Title         string
-	KeyEquivalent string
-	Tag           int
-}
-
 // viewMap is the mapping from Cocoa NSViews to Go windows.
 var viewMap = make(map[C.CFTypeRef]*window)
 
