@@ -20,6 +20,8 @@ __attribute__ ((visibility ("hidden"))) void gio_setCursor(NSUInteger curID);
 import "C"
 import (
 	"errors"
+	"log"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -94,7 +96,19 @@ func NewDisplayLink(callback func()) (*displayLink, error) {
 		states:   make(chan bool),
 		dids:     make(chan uint64),
 	}
-	dl := C.gio_createDisplayLink()
+	var dl C.CFTypeRef
+	for n, sleep := 0, time.Millisecond; n < 11; n, sleep = n+1, sleep*2 {
+		dl = C.gio_createDisplayLink()
+		if dl != 0 {
+			break
+		}
+		log.Printf("app: failed to create display link: %d of 10", n)
+		debug.PrintStack()
+		log.Printf("stack finished")
+		if n < 10 {
+			time.Sleep(sleep)
+		}
+	}
 	if dl == 0 {
 		return nil, errors.New("app: failed to create display link")
 	}
