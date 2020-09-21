@@ -46,7 +46,7 @@ __attribute__ ((visibility ("hidden"))) CFTypeRef gio_createWindow(CFTypeRef vie
 __attribute__ ((visibility ("hidden"))) void gio_makeKeyAndOrderFront(CFTypeRef windowRef);
 __attribute__ ((visibility ("hidden"))) NSPoint gio_cascadeTopLeftFromPoint(CFTypeRef windowRef, NSPoint topLeft);
 __attribute__ ((visibility ("hidden"))) void gio_close(CFTypeRef windowRef);
-__attribute__ ((visibility ("hidden"))) CFTypeRef gio_newMenuItem(const char *title, const char *keyEquivalent, int tag);
+__attribute__ ((visibility ("hidden"))) CFTypeRef gio_newMenuItem(const char *title, const char *keyEquivalent, int modifiers, int tag);
 __attribute__ ((visibility ("hidden"))) CFTypeRef gio_newMenu(const char *title);
 __attribute__ ((visibility ("hidden"))) void gio_menuAddItem(CFTypeRef menu, CFTypeRef menuItem);
 __attribute__ ((visibility ("hidden"))) CFTypeRef gio_newSubMenu(CFTypeRef subMenu);
@@ -510,7 +510,7 @@ func Menu(title string, items ...MenuItem) {
 				C.free(unsafe.Pointer(title))
 				C.free(unsafe.Pointer(keyEq))
 			}()
-			newWindowItem := C.gio_newMenuItem(title, keyEq, C.int(item.Tag))
+			newWindowItem := C.gio_newMenuItem(title, keyEq, mod2NSMod(item.Modifiers), C.int(item.Tag))
 			C.gio_menuAddItem(subMenu, newWindowItem)
 		}
 
@@ -518,4 +518,27 @@ func Menu(title string, items ...MenuItem) {
 		C.gio_menuAddItem(C.gio_mainMenu(), menu)
 	})
 	wg.Wait()
+}
+
+func mod2NSMod(m key.Modifiers) C.int {
+	if m == 0 {
+		return C.NSEventModifierFlagCommand
+	}
+
+	xlat := map[key.Modifiers]C.int{
+		//  C.  NSEventModifierFlagCapsLock
+		key.ModShift:   C.NSEventModifierFlagShift,
+		key.ModCtrl:    C.NSEventModifierFlagControl,
+		key.ModAlt:     C.NSEventModifierFlagOption,
+		key.ModCommand: C.NSEventModifierFlagCommand,
+	}
+
+	var res C.int
+	for bitIn, bitOut := range xlat {
+		if m&bitIn != 0 {
+			res = res | bitOut
+		}
+	}
+
+	return res
 }

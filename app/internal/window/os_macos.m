@@ -222,13 +222,16 @@ CFTypeRef gio_mainMenu() {
 	return (__bridge_retained CFTypeRef)[NSApp mainMenu];
 }
 
-CFTypeRef gio_newMenuItem(const char *title, const char *keyEquivalent, int tag) {
+CFTypeRef gio_newMenuItem(const char *title, const char *keyEquivalent, int modifiers, int tag) {
 	@autoreleasepool {
 		NSString *nsTitle = [NSString stringWithUTF8String:title];
 		NSString *nsKeyEq = [NSString stringWithUTF8String:keyEquivalent];
 		NSMenuItem *menuItem = [[NSMenuItem alloc] initWithTitle:nsTitle
 														  action:@selector(applicationMenu:)
 												   keyEquivalent:nsKeyEq];
+		if (modifiers != 0) {
+		  menuItem.keyEquivalentModifierMask = modifiers;
+		}
 		[menuItem setTag:tag];
 		return (__bridge_retained CFTypeRef)menuItem;
 	}
