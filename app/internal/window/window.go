@@ -9,6 +9,7 @@ import (
 
 	"gioui.org/gpu/backend"
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/io/system"
 	"gioui.org/unit"
@@ -82,6 +83,7 @@ type windowAndOptions struct {
 type MenuItem struct {
 	Title         string
 	KeyEquivalent string
+	Modifiers     key.Modifiers
 	Tag           int
 }
 
