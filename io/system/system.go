@@ -117,9 +117,8 @@ func (l Stage) String() string {
 	}
 }
 
-func (FrameEvent) ImplementsEvent()     {}
-func (StageEvent) ImplementsEvent()     {}
-func (*CommandEvent) ImplementsEvent()  {}
-func (DestroyEvent) ImplementsEvent()   {}
-func (ClipboardEvent) ImplementsEvent() {}
-func (MenuEvent) ImplementsEvent()      {}
+func (FrameEvent) ImplementsEvent()    {}
+func (StageEvent) ImplementsEvent()    {}
+func (*CommandEvent) ImplementsEvent() {}
+func (DestroyEvent) ImplementsEvent()  {}
+func (MenuEvent) ImplementsEvent()     {}
