@@ -23,9 +23,15 @@ type List struct {
 	Axis Axis
 	// ScrollToEnd instructs the list to stay scrolled to the far end position
 	// once reached. A List with ScrollToEnd == true and Position.BeforeEnd ==
-	// false draws its content with the last item at the bottom of the list
-	// area.
+	// false draws its content with the last item at the end of the list area.
 	ScrollToEnd bool
+
+	// scrollToItemPlusOne is the last item passed to ScrollTo, plus
+	// one to keep the zero List useful. It is reset by Layout. Zero indicates
+	// no scrolling requests since the last layout, and higher values indicate
+	// requests to scroll to index value-1.
+	scrollToItemPlusOne int
+
 	// Alignment is the cross axis alignment of list elements.
 	Alignment Alignment
 
@@ -35,8 +41,8 @@ type List struct {
 
 	// Position is updated during Layout. To save the list scroll position,
 	// just save Position after Layout finishes. To scroll the list
-	// programmatically, update Position (e.g. restore it from a saved value)
-	// before calling Layout.
+	// programatically, update Position (e.g. restore it from a saved value)
+	// before calling Layout, or use ScrollTo and related functions.
 	Position Position
 
 	len int
@@ -66,8 +72,10 @@ type Position struct {
 	BeforeEnd bool
 	// First is the index of the first visible child.
 	First int
+	// last is the index of the last visible child.
+	last int
 	// Offset is the distance in pixels from the top edge to the child at index
-	// First.
+	// First. Positive offsets are before (above or left of) the window edge.
 	Offset int
 }
 
@@ -95,11 +103,40 @@ func (l *List) init(gtx Context, len int) {
 	}
 }
 
+func (l *List) processScrollRequests() {
+	item := l.scrollToItemPlusOne - 1
+	if l.scrollToItemPlusOne <= 0 {
+		return
+	}
+	if l.Position.First < item && item < l.Position.last {
+		// Item is visible
+		l.scrollToItemPlusOne = 0
+		return
+	}
+	if (l.Position.First > 0 || l.Position.Offset > 0) && item <= l.Position.First {
+		// Item is before, or equal to, the first item drawn. Draw item at
+		// offset 0, at the beginning of the list, and go forward.
+		l.Position.First = item
+		l.Position.Offset = 0
+		l.Position.BeforeEnd = true
+		l.scrollToItemPlusOne = 0
+		return
+	}
+	if item >= l.Position.last {
+		// Item is after the last item drawn. Draw the end of item at the end of
+		// the list, and go backward.
+		l.Position.First = item + 1
+	}
+}
+
 // Layout the List.
 func (l *List) Layout(gtx Context, len int, w ListElement) Dimensions {
 	l.init(gtx, len)
 	crossMin, crossMax := axisCrossConstraint(l.Axis, gtx.Constraints)
 	gtx.Constraints = axisConstraints(l.Axis, 0, inf, crossMin, crossMax)
+
+	l.processScrollRequests()
+
 	macro := op.Record(gtx.Ops)
 	for l.next(); l.more(); l.next() {
 		child := op.Record(gtx.Ops)
@@ -117,6 +154,31 @@ func (l *List) scrollToEnd() bool {
 // Dragging reports whether the List is being dragged.
 func (l *List) Dragging() bool {
 	return l.scroll.State() == gesture.StateDragging
+}
+
+// ScrollTo makes sure list index item i is in view.
+//
+// If it's above the top, it becomes the top item. If it's below the bottom,
+// it becomes the bottom item, with said item positioned starting at the end of the
+// item. (This means that if the item is taller/longer than the list area, the
+// beginning of the item will be out of view.)
+//
+// If i < 0, uses 0.
+//
+// If you ScrollTo(n) and then layout a list shorter than n, Layout scrolls to
+// the end of the list.
+func (l *List) ScrollTo(item int) {
+	if item < 0 {
+		return
+	}
+	if l.len == 0 {
+		return
+	}
+	if item >= l.len {
+		l.scrollToItemPlusOne = l.len
+		return
+	}
+	l.scrollToItemPlusOne = item + 1
 }
 
 func (l *List) update(gtx Context) {
@@ -158,7 +220,8 @@ func (l *List) nextDir() iterationDir {
 	_, vsize := axisMainConstraint(l.Axis, l.cs)
 	last := l.Position.First + len(l.children)
 	// Clamp offset.
-	if l.maxSize-l.Position.Offset < vsize && last == l.len {
+	if l.maxSize-l.Position.Offset < vsize &&
+		(last == l.len || (l.scrollToItemPlusOne == last)) {
 		l.Position.Offset = l.maxSize - vsize
 	}
 	if l.Position.Offset < 0 && l.Position.First == 0 {
@@ -231,6 +294,11 @@ func (l *List) layout(ops *op.Ops, macro op.MacroOp) Dimensions {
 	if space := mainMax - size; l.ScrollToEnd && space > 0 {
 		pos += space
 	}
+	if len(children) == 0 {
+		l.Position.last = 0
+	} else {
+		l.Position.last = l.Position.First + len(children) - 1
+	}
 	for _, child := range children {
 		sz := child.size
 		var cross int
@@ -278,5 +346,6 @@ func (l *List) layout(ops *op.Ops, macro op.MacroOp) Dimensions {
 	pointer.Rect(image.Rectangle{Max: dims}).Add(ops)
 	l.scroll.Add(ops)
 	call.Add(ops)
+	l.scrollToItemPlusOne = 0
 	return Dimensions{Size: dims}
 }
