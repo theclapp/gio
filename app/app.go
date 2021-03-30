@@ -9,7 +9,7 @@ import (
 	"gioui.org/app/internal/wm"
 )
 
-type MenuItem = window.MenuItem
+type MenuItem = wm.MenuItem
 
 // extraArgs contains extra arguments to append to
 // os.Args. The arguments are separated with |.
@@ -50,5 +50,5 @@ func Main() {
 }
 
 func Menu(title string, items ...MenuItem) {
-	window.Menu(title, items...)
+	wm.Menu(title, items...)
 }
