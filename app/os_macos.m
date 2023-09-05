@@ -9,6 +9,7 @@
 __attribute__ ((visibility ("hidden"))) CALayer *gio_layerFactory(BOOL presentWithTrans);
 
 @interface GioAppDelegate : NSObject<NSApplicationDelegate>
+@property uintptr_t handle;
 @end
 
 @interface GioWindowDelegate : NSObject<NSWindowDelegate>
@@ -425,6 +426,12 @@ void gio_viewSetHandle(CFTypeRef viewRef, uintptr_t handle) {
 	[NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
 	[NSApp activateIgnoringOtherApps:YES];
 	gio_onFinishLaunching();
+}
+- (void)applicationDidHide:(NSNotification *)aNotification {
+	gio_onHide(self.handle);
+}
+- (void)applicationWillUnhide:(NSNotification *)notification {
+	gio_onShow(self.handle);
 }
 @end
 

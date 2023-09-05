@@ -880,6 +880,7 @@ func gio_onDestroy(h C.uintptr_t) {
 	w.displayLink = nil
 	cgo.Handle(h).Delete()
 	w.view = 0
+	time.Sleep(2 * time.Millisecond)
 }
 
 //export gio_onHide
