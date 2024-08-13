@@ -426,12 +426,6 @@ void gio_viewSetHandle(CFTypeRef viewRef, uintptr_t handle) {
 	[NSApp activateIgnoringOtherApps:YES];
 	gio_onFinishLaunching();
 }
-- (void)applicationDidHide:(NSNotification *)aNotification {
-	gio_onHide(self.handle);
-}
-- (void)applicationWillUnhide:(NSNotification *)notification {
-	gio_onShow(self.handle);
-}
 @end
 
 void gio_main() {
